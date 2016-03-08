@@ -1,0 +1,67 @@
+<!-- Copyright (C) 2016 CERN.
+
+  Invenio is free software; you can redistribute it
+  and/or modify it under the terms of the GNU General Public License as
+  published by the Free Software Foundation; either version 2 of the
+  License, or (at your option) any later version.
+
+  Invenio is distributed in the hope that it will be
+  useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with Invenio; if not, write to the
+  Free Software Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+  MA 02111-1307, USA.
+
+  In applying this license, CERN does not
+  waive the privileges and immunities granted to it by virtue of its status
+  as an Intergovernmental Organization or submit itself to any jurisdiction.
+-->
+<html>
+  <head>
+    <script src="./node_modules/angular/angular.js"></script>
+    <script src="./node_modules/ng-file-upload/dist/ng-file-upload-all.min.js"></script>
+    <script src="./node_modules/underscore/underscore-min.js"></script>
+    <script src="/src/invenio-files-js/invenioFiles.module.js"></script>
+    <link href="./node_modules/bootstrap/dist/css/bootstrap.css" rel="stylesheet"/>
+    <style>
+      body {
+        padding-top: 70px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-md-12">
+          <div class="jumbotron">
+            <h1>Invenio Files Demo</h1>
+          </div>
+          <div class="alert alert-info" role="alert">
+            <strong>Head up!</strong> Remember to update the bucket_id and the enpoint.
+          </div>
+          <div ng-app="invenioFiles">
+            <invenio-files-uploader
+              bucket-id="484580a6-6ecd-4e78-91ec-3c740f0c86d8"
+              method="PUT"
+              upload-endpoint="http://localhost:5000/files"
+              upload-extra-params='{"resumeChunkSize": 900000}'
+            >
+              <invenio-files-error
+                template="/src/invenio-files-js/templates/error.html"
+              ></invenio-files-error>
+              <invenio-files-upload-zone
+                template="/src/invenio-files-js/templates/upload.html"
+              ></invenio-files-upload-zone>
+              <invenio-files-list
+                template="/src/invenio-files-js/templates/list.html"
+              ></invenio-files-list>
+            </invenio-files-uploader>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

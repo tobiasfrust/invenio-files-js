@@ -1,0 +1,23 @@
+<div class="well"
+  ngf-drag-over-class="'dragover'"
+  ngf-drop="vm.addFiles($files)"
+  ngf-keep="'distinct'"
+  ngf-max-size="20GB"
+  ngf-multiple="true"
+>
+  <center>
+    Drop files or folders here
+  </center>
+</div>
+<p class="text-center legend"><strong>— OR —</strong></p>
+<p class="text-center">
+  <button  class="btn btn-primary"
+    ngf-keep="'distinct'"
+    ngf-max-size="20GB"
+    ngf-multiple="true"
+    ngf-select="vm.addFiles($files)"
+  >
+    Click to select
+  </button>
+</p>
+<hr />
