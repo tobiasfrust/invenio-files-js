@@ -781,6 +781,9 @@
       var deferred = $q.defer();
       var args = that._prepareRequest(file.name);
       args.data.file = file;
+      args.headers = {
+        'Uploader-File-Size': file.size
+      };
       this._requestUploadID(args).then(function(response) {
         var _file = response.config.data.file;
         var params = that._prepareRequest(_file.name);
@@ -794,11 +797,11 @@
             deferred.reject(response);
           }, function(evt) {
             var progress = parseInt(100.0 * evt.loaded / evt.total, 10);
-            var params = {
+            var _params = {
               file: evt.config.data.file,
               progress: progress > 100 ? 100 : progress,
             };
-            $rootScope.$emit('invenio.uploader.upload.file.progress', params);
+            $rootScope.$emit('invenio.uploader.upload.file.progress', _params);
           }
         );
       }, function(response) {
