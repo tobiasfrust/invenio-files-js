@@ -30,7 +30,7 @@
    * @description
    *    Invenio files controller.
    */
-  function invenioFilesController($rootScope, $scope, $timeout,
+  function invenioFilesController($rootScope, $scope, $q, $timeout,
     invenioFilesAPI, InvenioFilesUploaderModel) {
 
     // Assign the controller to vm
@@ -40,22 +40,45 @@
 
     // Functions
 
+    function requestBucketID() {
+      var deferred = $q.defer();
+      if (vm.invenioFilesInitialization !== undefined && vm.invenioFilesArgs.bucket_id === null) {
+        invenioFilesAPI.request({
+          url: vm.invenioFilesInitialization,
+          method: 'POST'
+        }).then(function(response) {
+          $rootScope.$broadcast('invenio.deposit.init', response);
+          deferred.resolve();
+        }, function(response) {
+          deferred.rejected();
+        });
+      } else {
+        deferred.resolve();
+      }
+      return deferred.promise;
+    }
+
     /**
      * Request an upload
      * @memberof invenioFilesController
      * @function upload
      */
     function upload() {
-      // Get next file to upload
-      Uploader.setArgs(vm.invenioFilesArgs);
-      // Get the available states
-      var states = Uploader.getStates();
-      // Change the state
-      Uploader.setState(states.STARTED);
-      // Start uploading
-      Uploader.next();
-      // Emit the news!
-      $rootScope.$emit('invenio.uploader.upload.started');
+      requestBucketID().then(function() {
+        // Get next file to upload
+        Uploader.setArgs(vm.invenioFilesArgs);
+        // Get the available states
+        var states = Uploader.getStates();
+        // Change the state
+        Uploader.setState(states.STARTED);
+        // Start uploading
+        Uploader.next();
+        // Emit the news!
+        $rootScope.$emit('invenio.uploader.upload.started');
+      }, function(response) {
+        // Broadcast the error
+        $scope.$broadcast('invenio.uploader.error', response);
+      });
     }
 
     /**
@@ -63,13 +86,25 @@
      * @memberof invenioFilesController
      * @function invenioUploaderInitialization
      */
-    function invenioUploaderInitialization (evt, params) {
+    function invenioUploaderInitialization(evt, params) {
       // Do initialization
       vm.invenioFilesArgs = angular.merge(
         {},
         vm.invenioFilesArgs,
         params
       );
+    }
+
+    /**
+     * Get bucket id from deposit
+     * @memberof invenioFilesController
+     * @function invenioUploaderInitialization
+     */
+    function invenioDepositInit(evt, data) {
+      // Set the bucket_id if not already set!
+      if (vm.invenioFilesArgs.bucket_id === null) {
+        vm.invenioFilesArgs.bucket_id = data.bucket_id;
+      }
     }
 
     /**
@@ -283,7 +318,6 @@
 
     // Parameters
 
-
     // Initialize module $http request args
     vm.invenioFilesArgs = {
       data: {
@@ -345,11 +379,14 @@
       'invenio.uploader.upload.canceled', invenioUploaderCanceled
     );
 
+    // When the bucket_id is empty we should retrieve it from events
+    $rootScope.$on('invenio.deposit.init', invenioDepositInit);
+
     ////////////
   }
 
   invenioFilesController.$inject = [
-    '$rootScope', '$scope', '$timeout', 'invenioFilesAPI',
+    '$rootScope', '$scope', '$q', '$timeout', 'invenioFilesAPI',
     'invenioFilesUploaderModel'
   ];
 
@@ -386,6 +423,8 @@
      * @param {invenioFilesController} vm - Invenio uploader controller.
      */
     function link(scope, element, attrs, vm) {
+      // Set the initialization
+      vm.invenioFilesInitialization = attrs.initialization || undefined;
       // Update the parameters
       var collectedArgs = {
         url: attrs.uploadEndpoint,
@@ -411,7 +450,7 @@
       restricted: 'AE',
       scope: false,
       controller: 'invenioFilesController',
-      controllerAs: 'vm',
+      controllerAs: 'filesVM',
       link: link,
     };
   }

@@ -1,6 +1,6 @@
 <div class="well"
   ngf-drag-over-class="'dragover'"
-  ngf-drop="vm.addFiles($files)"
+  ngf-drop="filesVM.addFiles($files)"
   ngf-keep="'distinct'"
   ngf-max-size="20GB"
   ngf-multiple="true"
@@ -15,7 +15,7 @@
     ngf-keep="'distinct'"
     ngf-max-size="20GB"
     ngf-multiple="true"
-    ngf-select="vm.addFiles($files)"
+    ngf-select="filesVM.addFiles($files)"
   >
     Click to select
   </button>
