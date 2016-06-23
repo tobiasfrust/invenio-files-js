@@ -1,4 +1,4 @@
-<!-- Copyright (C) 2016 CERN.
+<!-- Copyright (C) 2016 CERN
 
   Invenio is free software; you can redistribute it
   and/or modify it under the terms of the GNU General Public License as
@@ -40,14 +40,16 @@
             <h1>Invenio Files Demo</h1>
           </div>
           <div class="alert alert-info" role="alert">
-            <strong>Head up!</strong> Remember to update the bucket_id and the enpoint.
+            <strong>Head up!</strong> Remember to set the proper ``resumeChunkSize`` and to have your ``invenio-files-rest`` up and running and set the ``bucket`` attribute with the URL.
+            Check how to run your ``invenio-files-rest`` API in the <a href="https://github.com/inveniosoftware/invenio-files-rest">example app</a>. Also note if you want to add it as part
+            of ``invenio-deposit`` use ``initialization`` attr instead of ``bucket``.
           </div>
           <div ng-app="invenioFiles">
             <invenio-files-uploader
-              bucket-id="484580a6-6ecd-4e78-91ec-3c740f0c86d8"
               method="PUT"
-              upload-endpoint="http://localhost:5000/files"
-              upload-extra-params='{"resumeChunkSize": 900000}'
+              bucket="http://localhost:8800/files/00000000-0000-0000-0000-000000000000"
+              extra-params='{"resumeChunkSize": 9000000}'
+              files='[{"name": "Jessica Jones.pdf", "size": "2500000", "completed": true, "progress": 100}]'
             >
               <invenio-files-error
                 template="/src/invenio-files-js/templates/error.html"

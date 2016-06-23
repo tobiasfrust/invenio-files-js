@@ -35,25 +35,55 @@
 
     // Assign the controller to vm
     var vm = this;
+
+    // Parameters
+
+    // Initialize the endpoints
+    vm.invenioFilesEndpoints = {};
+
+    // Initialize module $http request args
+    vm.invenioFilesArgs = {
+      data: {
+        file: [],
+      },
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    };
+
     // Initialize the model
     var Uploader = new InvenioFilesUploaderModel();
 
-    // Functions
-
-    function requestBucketID() {
+    /**
+     * Request an upload
+     * @memberof invenioFilesController
+     * @function upload
+     */
+    function getEndpoints(){
       var deferred = $q.defer();
-      if (vm.invenioFilesInitialization !== undefined && vm.invenioFilesArgs.bucket_id === null) {
+      if (vm.invenioFilesEndpoints.bucket === undefined) {
+        // If the action url doesnt exists request it
         invenioFilesAPI.request({
-          url: vm.invenioFilesInitialization,
-          method: 'POST'
-        }).then(function(response) {
-          $rootScope.$broadcast('invenio.deposit.init', response);
-          deferred.resolve();
-        }, function(response) {
-          deferred.rejected();
+          method: 'POST',
+          url: vm.invenioFilesEndpoints.initialization,
+          data: {},
+          headers: vm.invenioFilesArgs.headers || {}
+        }).then(function success(response) {
+          // Get the bucket
+          vm.invenioFilesArgs.url = response.data.links.bucket;
+          // Upadate the endpoints
+          $rootScope.$broadcast(
+            'invenio.records.endpoints.updated', response.data.links
+          );
+          deferred.resolve({});
+        }, function error(response) {
+          // Error
+          deferred.reject(response);
         });
       } else {
-        deferred.resolve();
+        // We already have it resolve it asap
+        vm.invenioFilesArgs.url = vm.invenioFilesEndpoints.bucket;
+        deferred.resolve({});
       }
       return deferred.promise;
     }
@@ -64,7 +94,7 @@
      * @function upload
      */
     function upload() {
-      requestBucketID().then(function() {
+      getEndpoints().then(function() {
         // Get next file to upload
         Uploader.setArgs(vm.invenioFilesArgs);
         // Get the available states
@@ -86,25 +116,37 @@
      * @memberof invenioFilesController
      * @function invenioUploaderInitialization
      */
-    function invenioUploaderInitialization(evt, params) {
+    function invenioUploaderInitialization(evt, params, endpoints, files) {
       // Do initialization
       vm.invenioFilesArgs = angular.merge(
         {},
         vm.invenioFilesArgs,
         params
       );
+      // Add the entpoints
+      vm.invenioFilesEndpoints = angular.merge(
+        {},
+        vm.invenioFilesEndpoints,
+        endpoints
+      );
+
+      // Add any files on initialization
+      vm.files = files;
     }
 
     /**
-     * Get bucket id from deposit
-     * @memberof invenioFilesController
-     * @function invenioUploaderInitialization
-     */
-    function invenioDepositInit(evt, data) {
-      // Set the bucket_id if not already set!
-      if (vm.invenioFilesArgs.bucket_id === null) {
-        vm.invenioFilesArgs.bucket_id = data.bucket_id;
-      }
+      * Updating the endpoints
+      * @memberof invenioFilesController
+      * @function invenioRecordsEndpointsUpdated
+      * @param {Object} evt - The event object.
+      * @param {Object} endpoints - The object with the endpoints.
+      */
+    function invenioFilesEndpointsUpdated(evt, endpoints) {
+      vm.invenioFilesEndpoints = angular.merge(
+        {},
+        vm.invenioFilesEndpoints,
+        endpoints
+      );
     }
 
     /**
@@ -128,7 +170,7 @@
         // Prepare parameters
         var args = angular.copy(vm.invenioFilesArgs);
         args.method = 'DELETE';
-        args.url = args.url + '/' + args.bucket_id + '/' + file.name;
+        args.url = file.links.self;
         invenioFilesAPI.request(args).then(function(response) {
           // Just remove it from the list
           vm.files.splice(_.indexOf(vm.files, file), 1);
@@ -147,6 +189,17 @@
       }
     }
 
+    function fileReducer(file) {
+      return {
+        key: file.name,
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        lastModified: file.lastModified,
+        lastModifiedDate: file.lastModifiedDate
+      };
+    }
+
     /**
      * Add files to the list
      * @memberof invenioFilesController
@@ -154,8 +207,9 @@
      */
     function addFiles(files) {
       _.each(files, function(file, index) {
-        if (_.indexOf(vm.files, file) === -1){
-          vm.files.push(file);
+        if (_.findWhere(vm.files, {name: file.name}) === undefined) {
+          var _file = fileReducer(file);
+          vm.files.push(_file);
           // Added to queue
           Uploader.pushToQueue(file);
         } else {
@@ -177,25 +231,40 @@
       Uploader.cancelUploads();
     }
 
+    function findInFiles(key) {
+      var index = -1;
+      angular.forEach(vm.files, function(value, _index) {
+        if (value.key === key) {
+          index = _index;
+          return;
+        }
+      });
+      return index;
+    }
+
     /**
      * When the files has been uploaded succesfully
      * @memberof invenioFilesController
      * @function fileUplaodedSuccess
      */
     function fileUploadedSuccess(evnt, data) {
-      var index = _.indexOf(vm.files, data.config.data.file);
+      // note that if the file uploaded via chunks the success receives
+      // two keys the ``response`` and ``data`` in any other case it just
+      // receives the object
+      var _obj = data.data;
+
+      // Find the index
+      var index = findInFiles(_obj.key);
       if (index > -1) {
         vm.files[index].completed = true;
-      } else {
-        $scope.$broadcast('invenio.uploader.debug', {
-          data: {
-            message: 'Uploaded file not found on the UI',
-            data: data,
-            evnt: evnt,
-          }
-        });
+        vm.files[index] = angular.merge(
+          {},
+          vm.files[index],
+          _obj
+        );
       }
     }
+
 
     /**
      * When the files has been uploaded have errors
@@ -203,19 +272,10 @@
      * @function fileUplaodedError
      */
     function fileUploadedError(evnt, data) {
-      var index = _.indexOf(vm.files, data.config.data.file);
+      var index = findInFiles(data.config.data.file.name);
       if (index > -1) {
         vm.files[index].errored = true;
-        vm.files[index].completed = true;
         $scope.$broadcast('invenio.uploader.error', data);
-      } else {
-        $scope.$broadcast('invenio.uploader.debug', {
-          data: {
-            message: 'Uploaded file not found on the UI',
-            data: data,
-            evnt: evnt,
-          }
-        });
       }
     }
 
@@ -225,17 +285,9 @@
      * @function fileUplaodedProgress
      */
     function fileUploadedProgress(evnt, data) {
-      var index = _.indexOf(vm.files, data.file);
+      var index = findInFiles(data.file.name);
       if (index > -1) {
         vm.files[index].progress = data.progress;
-      } else {
-        $scope.$broadcast('invenio.uploader.debug', {
-          data: {
-            message: 'Uploaded file not found on the UI',
-            data: data,
-            evnt: evnt,
-          }
-        });
       }
     }
 
@@ -257,16 +309,6 @@
     function invenioFilesWarning(evt, data) {
       vm.invenioFilesWarning = {};
       vm.invenioFilesWarning = data;
-    }
-
-    /**
-     * For debug proposes
-     * @memberof invenioFilesController
-     * @function invenioFilesDebug
-     */
-    function invenioFilesDebug(evt, data) {
-      vm.invenioFilesDebug = {};
-      vm.invenioFilesDebug = data;
     }
 
     /**
@@ -297,6 +339,22 @@
      */
     function reinitializeUploader() {
       _.each(vm.files, function(file, index) {
+        // Clean progress and error
+        if (file.progress !== undefined && file.progress < 100) {
+          // Those are incomplete send DELETE request
+          var args = angular.copy(vm.invenioFilesArgs);
+          args.method = 'DELETE';
+          args.url = args.url + '/' + file.key;
+          invenioFilesAPI.request(args).then(function(response) {
+            // Just remove it from the list
+            $scope.$broadcast('invenio.uploader.file.deleted', file);
+            // Reinit the file
+            delete vm.files[index].progress;
+            delete vm.files[index].errored;
+          }, function(response) {
+            $scope.$broadcast('invenio.uploader.error', response);
+          });
+        }
         if (file.completed === undefined) {
           Uploader.pushToQueue(file);
         }
@@ -315,15 +373,6 @@
     }
 
     ////////////
-
-    // Parameters
-
-    // Initialize module $http request args
-    vm.invenioFilesArgs = {
-      data: {
-        file: [],
-      }
-    };
 
     // Add file to the list
     vm.addFiles = addFiles;
@@ -353,7 +402,6 @@
     );
 
     // General uplaoder events
-    $scope.$on('invenio.uploader.debug', invenioFilesDebug);
     $scope.$on('invenio.uploader.error', invenioFilesError);
     $scope.$on('invenio.uploader.warning', invenioFilesWarning);
 
@@ -380,7 +428,9 @@
     );
 
     // When the bucket_id is empty we should retrieve it from events
-    $rootScope.$on('invenio.deposit.init', invenioDepositInit);
+    $rootScope.$on(
+      'invenio.records.endpoints.updated', invenioFilesEndpointsUpdated
+    );
 
     ////////////
   }
@@ -403,10 +453,9 @@
    * @example
    *    Usage:
    *     <invenio-files-uploader
-   *       bucket-id="4077fbb5-fd4f-47ac-8b29-cbcc73370594"
    *       method="PUT"
-   *       upload-endpoint="http://localhost:5000/files"
-   *       upload-extra-params='{"resumeChunkSize": 900000}'
+   *       endpoint="http://localhost:5000/files"
+   *       extra-params='{"resumeChunkSize": 900000}'
    *     >
    *     </invenio-files-uploader>
    */
@@ -423,25 +472,22 @@
      * @param {invenioFilesController} vm - Invenio uploader controller.
      */
     function link(scope, element, attrs, vm) {
-      // Set the initialization
-      vm.invenioFilesInitialization = attrs.initialization || undefined;
-      // Update the parameters
-      var collectedArgs = {
-        url: attrs.uploadEndpoint,
-        method: attrs.uploadMethod || 'PUT',
-        bucket_id: attrs.bucketId || null,
+      // Get the endpoints for schemas
+      var endpoints = {
+        bucket: attrs.bucket || undefined,
+        initialization: attrs.initialization || undefined,
       };
 
-      var extraParams = JSON.parse(attrs.uploadExtraParams || '{}');
-      // Update arguments
-      var params = angular.merge(
-        {},
-        collectedArgs,
-        extraParams
-      );
+      var params = JSON.parse(attrs.extraParams || '{}');
+
+      var files = JSON.parse(attrs.files || '[]');
 
       // Brodcast ready to initialization
-      scope.$broadcast('invenio.uploader.initialazation', params);
+      scope.$broadcast('invenio.uploader.initialazation',
+        params,
+        endpoints,
+        files
+      );
     }
 
     ////////////
@@ -755,42 +801,73 @@
       }
     };
 
+    Uploader.prototype.checkUploadStatus = function(upload) {
+      var defer = $q.defer();
+      if (upload.xhr !== undefined) {
+        defer.resolve(upload);
+      } else {
+        upload.then(function(ret) {
+          defer.resolve(ret);
+        });
+      }
+      return defer.promise;
+    };
+
     Uploader.prototype.upload = function(file) {
       // Do the upload and call this.next() else this.push()
       var that = this;
       // Check if we have more space in the slots
       if (that.getUploads().length < (that.args.max_request_slots || 3)) {
-        var upload = that._upload(file);
-        $rootScope.$emit('invenio.uploader.upload.file.init', file);
-        // Add the upload to the list
-        that.addUpload(upload);
-        // Make the promise request
-        upload.then(function(response) {
-          $rootScope.$emit('invenio.uploader.upload.file.uploaded', response);
-        }, function(response) {
-          $rootScope.$emit('invenio.uploader.upload.file.errored', response);
-        }, function(evt) {
-          var progress = parseInt(100.0 * evt.loaded / evt.total, 10);
-          var params = {
-            file: evt.config.data.file,
-            progress: progress > 100 ? 100 : progress
-          };
-          $rootScope.$emit('invenio.uploader.upload.file.progress', params);
-        });
-        // Finaly remove the upload
-        upload.finally(function() {
-          // Remove the uploader from the list
-          that.removeUpload(this);
-          // Call the next upload
-          _.delay(function() {
-            that.next();
+        that._upload(file)
+          .then(function(_obj) {
+            var upload = invenioFilesAPI
+              .upload(_obj.uploadArgs);
+            // Emit
+            $rootScope.$emit('invenio.uploader.upload.file.init', file);
+            // Add the upload to the list
+            that.addUpload(upload);
+            upload.then(
+                function(response) {
+                  var params = (response.data.links === undefined) ? _obj.uploadArgs.url : response;
+                  _obj.successCallback
+                    .call(this, params)
+                    .then(
+                      function(response) {
+                        $rootScope.$emit(
+                          'invenio.uploader.upload.file.uploaded',
+                          response
+                        );
+                      }, function(response) {
+                        $rootScope.$emit(
+                          'invenio.uploader.upload.file.errored', response
+                          );
+                      });
+                  // Call success funtion with url
+                }, function(response) {
+                  $rootScope.$emit(
+                    'invenio.uploader.upload.file.errored', response
+                  );
+                }, function(evt) {
+                  var progress = parseInt(100.0 * evt.loaded / evt.total, 10);
+                  var params = {
+                    file: evt.config.data.file,
+                    progress: progress > 100 ? 100 : progress
+                  };
+                  $rootScope.$emit(
+                    'invenio.uploader.upload.file.progress', params
+                  );
+                }
+              )
+              .finally(function(evt) {
+                  // Remove the uploader from the list
+                  that.removeUpload(this);
+                  // Call the next upload
+                  _.delay(function() {
+                    that.next();
+                  });
+                  $rootScope.$emit('invenio.uploader.upload.next.call');
+                });
           });
-        });
-        // Call the next upload
-        _.delay(function() {
-          that.next();
-        });
-        $rootScope.$emit('invenio.uploader.upload.next.call');
       } else {
         // Just put it in the pending
         that.pushToPending(file);
@@ -800,63 +877,75 @@
     };
 
     Uploader.prototype._upload = function (file) {
-      if (file.size > this.args.resumeChunkSize) {
-        $rootScope.$emit('invenio.uploader.upload.file.chunked.requested', file);
-        return this._chunkedUpload(file);
-      } else {
-        $rootScope.$emit('invenio.uploader.upload.file.normal.requested', file);
-        return this._normalUpload(file);
-      }
-    };
-
-    Uploader.prototype._normalUpload = function(file) {
-      var args = this._prepareRequest(file.name);
-      args.data.file = file;
-      return invenioFilesAPI.upload(args);
-    };
-
-    Uploader.prototype._chunkedUpload = function(file) {
-      var that = this;
       var deferred = $q.defer();
-      var args = that._prepareRequest(file.name);
-      args.data.file = file;
-      args.headers = {
-        'Uploader-File-Size': file.size
-      };
-      this._requestUploadID(args).then(function(response) {
-        var _file = response.config.data.file;
-        var params = that._prepareRequest(_file.name);
-        params.data.file = _file;
-        params.data.upload_id = response.data.upload_id;
-        invenioFilesAPI.upload(params).then(
-          function(response) {
-            deferred.resolve(response);
-          },
-          function(response) {
-            deferred.reject(response);
-          }, function(evt) {
-            var progress = parseInt(100.0 * evt.loaded / evt.total, 10);
-            var _params = {
-              file: evt.config.data.file,
-              progress: progress > 100 ? 100 : progress,
-            };
-            $rootScope.$emit('invenio.uploader.upload.file.progress', _params);
-          }
+      var that = this;
+      if (file.size < this.args.resumeChunkSize) {
+        $rootScope.$emit(
+          'invenio.uploader.upload.file.chunked.requested', file
         );
-      }, function(response) {
-        deferred.reject(response);
+        // Prepare args
+        var args = that._prepareRequest(file.name, 'PUT');
+        // Add the file
+        args.data.file = file;
+        // Resolve the request
+        deferred.resolve({
+          uploadArgs: args,
+          successCallback: that.postNormalUploadProcess
+        });
+      } else {
+        $rootScope.$emit(
+          'invenio.uploader.upload.file.normal.requested', file
+        );
+        var _args = that._prepareRequest(file.name, 'POST');
+        // Add the file
+        _args.data.file = file;
+        // Request upload id
+        that._requestUploadID(_args)
+          .then(function(response) {
+            var _requestArgs = that._prepareRequest(file.name, 'PUT');
+            // Append the file
+            _requestArgs.data.file = file;
+            // Append the url
+            _requestArgs.url = response.data.links.self;
+            // Resolve the request
+            deferred.resolve({
+              uploadArgs: _requestArgs,
+              successCallback: that.postChunkUploadProcess
+            });
+          });
+      }
+      return deferred.promise;
+    };
+
+    Uploader.prototype.postChunkUploadProcess = function(url) {
+      var deferred = $q.defer();
+      // Finishing up the chunk upload
+      invenioFilesAPI.request({
+        method: 'POST',
+        url: url,
+      }).then(function(response) {
+        deferred.resolve(response);
+      }, function(error) {
+        deferred.reject(error);
       });
       return deferred.promise;
     };
 
+    Uploader.prototype.postNormalUploadProcess = function(obj) {
+      var deferred = $q.defer();
+      deferred.resolve(obj);
+      return deferred.promise;
+    };
+
     Uploader.prototype._requestUploadID = function(args) {
-      args.url = args.url+'?uploads=1';
+      args.url = args.url+'?uploads=1&size='+ args.data.file.size + '&part_size='+ args.resumeChunkSize;
       return invenioFilesAPI.request(args);
     };
 
-    Uploader.prototype._prepareRequest = function(name) {
+    Uploader.prototype._prepareRequest = function(name, method) {
       var args = angular.copy(this.args);
-      args.url = args.url + '/' + args.bucket_id + '/' + name;
+      args.url = args.url + '/' + name;
+      args.method = method || 'POST';
       return args;
     };
 
@@ -900,6 +989,7 @@
         return round(size / limit, 1) + ' Gb';
       }
       if (size > (limit/=1024)) {
+
         return round(size / limit, 1) + ' Mb';
       }
       if (size > 1024) {

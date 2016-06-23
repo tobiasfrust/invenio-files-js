@@ -135,11 +135,7 @@ gulp.task('demo', function() {
   gulp.src(rootDirectory)
     .pipe(plugins.webserver({
       livereload: true,
-      open: '/example/index.html',
-      middleware: function(req, res, next) {
-        res.setHeader('Access-Control-Allow-Origin', 'http://localhost:8000');
-        next();
-      }
+      open: '/example/index.html'
   }));
 });
 
