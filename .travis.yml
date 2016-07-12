@@ -34,8 +34,8 @@ node_js:
 
 env:
   global:
-    - GH_REF: 'UPDATE_WITH_GH_REF'
-    - secure: 'UPDATE_WITH_GH_TOKEN'
+    - GH_REF: 'github.com/inveniosoftware/invenio-files-js.git'
+    - secure: "mnlQlai+1QH0aAerVpoH97wxzoNgaEZnl4s6XajIUsnhy4IjnqFa7iB83rNniSapPk5RiEGB1C549aw7LtkL9ERRzMk4T3dqukFU0DRES5+4E115RgDvMN9Jd35MvFfyIeplMHm94cVu/+kmZSGzmaCItGCvC2cNYJ2DdYz3pzL8Pt9DZ8PJ0XS9N6dOi/1yAeWnEPFdiwBgCwKBtvH9a/Kz4YxkIdMlTwPl4kCBFWotiwj1cxLY5KxSW4cCAeavux2cLyrY6QIXV6Wj3UUw1DBOnao0QFiBmKmoYrNLScJffYj5DGn06F8VOIvolK9X2/XvbghSCmiqcRMEvOtsACJWTs1k039UfYvjMnhWDpbeKwXMHK2OD0BAa/3+dqYOWKaVem/RN1HJkzd0fz2aiP9KMgfQTGfF/BzgUERZfU9S/9FomUrzHCz+cs5Yc1PKe8FAvQoyGu5pnMA101cr4o17+TUAPUjRYHUUTK+/xca7h/B8cATyWQOR7/o5/L+MTwyjwdVAj14bSJa+VWnBU+EN15jubbZ+kkVpYBSIDfrrdU6yROUX6zMxZS0vomUwHDjLE9fR8cKZZu4JdYm0cMvMMrFDSimrGJuUvdoRWJQtYFDYg1xDxQFe/6layr7ZNpqFfbRosdofzlEyA1APSmIvJrQzJ/Sl5m405od1GOE="
 
 before_script:
   - 'npm install -g gulp'
@@ -55,9 +55,9 @@ before_deploy:
 deploy:
   provider: npm
   skip_cleanup: true
-  email: 'UPDATE_WITH_NPM_DEPLOY_EMAIL'
+  email: info@inveniosoftware.org
   api_key:
-    secure: 'UPDATE_WITH_NPM_DEPLOY_SECRET'
+    secure: e82MWyJnf7VnUmayAWxWuhtocINuUoo2Tt5rsvlAdMRZ0KFJmfQfJxDK9iLm2yAx4CjfPt30TioVS4l0QO9/0eC5LL4DWhweUqi3gsJLLrPwYhNUQHNWZz0mZ7LvWiz0TmlyBLIAxyvVfdG9NyK7JWhs0IauMcvgVuSSpxkgBtFM72zL3Dq7lGR5mYc7zYkcIvVrnMgCz3K8R4Jib2Eg5GtZIYiNwIVG
   on:
     tags: true
     repo: 'inveniosoftware/invenio-files-js'
