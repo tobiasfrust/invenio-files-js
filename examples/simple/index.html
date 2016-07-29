@@ -25,6 +25,7 @@
     <script src="./node_modules/ng-file-upload/dist/ng-file-upload-all.min.js"></script>
     <script src="./node_modules/underscore/underscore-min.js"></script>
     <script src="/dist/invenio-files-js.min.js"></script>
+    <script src="https://www.dropbox.com/static/api/2/dropins.js"></script>
     <link href="./node_modules/bootstrap/dist/css/bootstrap.css" rel="stylesheet"/>
     <style>
       body {
@@ -60,6 +61,12 @@
               <invenio-files-list
                 template="/src/invenio-files-js/templates/list.html"
               ></invenio-files-list>
+              <invenio-files-upload-remote
+                template="/src/invenio-files-js/templates/remote_upload.html"
+                dropbox-enabled="true"
+                dropbox-selector=".dropbox-upload"
+                dropbox-app-key="y9rwoqzxzini1x4"
+              ></invenio-files-upload-remote>
             </invenio-files-uploader>
           </div>
         </div>

@@ -39,7 +39,11 @@ function InvenioFilesAPI($http, Upload) {
     * @param {boolean} multipartUpload - If the upload is multipart.
     */
   function upload(args, multipartUpload) {
-    if (multipartUpload) {
+    if (args.remote) {
+      var promise = $http(args);
+      promise.abort = angular.noop;
+      return promise;
+    } else if (multipartUpload) {
       return Upload.upload(args);
     }
       return Upload.http(args);
