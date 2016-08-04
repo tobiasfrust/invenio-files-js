@@ -47,15 +47,23 @@ describe('Unit: testing the module', function() {
     {
       key: 'jessica_jones.pdf',
       name: 'jessica_jones.pdf',
-      size: 14589255,
+      size: 9999999999999999,
       type: 'application/pdf',
       lastModified: 1464785035000,
       lastModifiedDate: '2016-06-01T12:43:55.000Z'
     },
     {
-      key: 'the_punisher',
+      key: 'the_punisher.pdf',
       name: 'the_punisher.pdf',
-      size: 14589255,
+      size: 9999999999,
+      type: 'application/pdf',
+      lastModified: 1464785035000,
+      lastModifiedDate: '2016-06-01T12:43:55.000Z'
+    },
+    {
+      key: 'harley_quinn.pdf',
+      name: 'harley_quinn.pdf',
+      size: 9,
       type: 'application/pdf',
       lastModified: 1464785035000,
       lastModifiedDate: '2016-06-01T12:43:55.000Z'
@@ -118,10 +126,10 @@ describe('Unit: testing the module', function() {
     scope.filesVM.addFiles(_files);
     // Digest
     scope.$digest();
-    // 4 files on the UI
-    expect(template.find('.sel-file').length).to.be.equal(4);
+    // 5 files on the UI
+    expect(template.find('.sel-file').length).to.be.equal(5);
     // Check also in the controller
-    expect(scope.filesVM.files.length).to.be.equal(4);
+    expect(scope.filesVM.files.length).to.be.equal(5);
     // Call upload
     scope.filesVM.upload();
   }
@@ -151,11 +159,23 @@ describe('Unit: testing the module', function() {
     $timeout = _$timeout_;
 
     // The controller
-    ctrl = $controller('invenioFilesController', {
+    ctrl = $controller('InvenioFilesCtrl', {
       $scope: scope,
     });
   }));
 
+  it('should have the correct file sizes', function() {
+    // Call directiveTemplate
+    directiveTemplate('bucket="/api/bucket_id"');
+    // Upload files
+    uploadFiles();
+    // Expect the files to have the correct size
+    expect(template.find('.sel-file').eq(0).find('td').eq(1).text()).to.be.equal('2.4 Mb');
+    expect(template.find('.sel-file').eq(1).find('td').eq(1).text()).to.be.equal('879 Kb');
+    expect(template.find('.sel-file').eq(2).find('td').eq(1).text()).to.be.equal('9094.9 Tb');
+    expect(template.find('.sel-file').eq(3).find('td').eq(1).text()).to.be.equal('9.3 Gb');
+    expect(template.find('.sel-file').eq(4).find('td').eq(1).text()).to.be.equal('9 B');
+  });
 
   it('should initialize the uploader with event', function() {
     // Spy the broadcast
@@ -164,7 +184,6 @@ describe('Unit: testing the module', function() {
     // What request to expect
     $httpBackend.when('PUT', '/api/bucket_id/dare_devil.pdf')
       .respond(200, _smallFileResponse);
-
 
     // Call directiveTemplate
     directiveTemplate('bucket="/api/bucket_id"');
@@ -196,6 +215,19 @@ describe('Unit: testing the module', function() {
     scope.$digest();
     // Expect the file to be completed
     expect(scope.filesVM.files[1].completed).to.be.true;
+
+    // Update the progress
+    $rootScope.$broadcast('invenio.uploader.upload.file.progress', {
+      file: {
+        name: 'harley_quinn.pdf'
+      },
+      progress: 20
+    });
+
+    // Digest
+    scope.$digest();
+    // Expect the file to be completed
+    expect(scope.filesVM.files[4].progress).to.be.equal(20);
   });
 
   it('should error the uploader with event', function() {
@@ -371,7 +403,7 @@ describe('Unit: testing the module', function() {
     scope.$digest();
 
     // One preloaded file
-    expect(template.find('.sel-file').length).to.be.equal(3);
+    expect(template.find('.sel-file').length).to.be.equal(4);
 
     // Remove not uploaded file
     scope.filesVM.remove(scope.filesVM.files[2]);
@@ -511,7 +543,6 @@ describe('Unit: testing the module', function() {
     expect(scope.filesVM.invenioFilesEndpoints.self)
       .to.be.equal(_links.links.self);
 
-
     // Expect the file to be completed
     expect(scope.filesVM.files[1].completed).to.be.true;
 
@@ -537,5 +568,13 @@ describe('Unit: testing the module', function() {
 
     // Should trigger init
     expect(spy.calledWith('invenio.uploader.file.deleted')).to.be.true;
+
+    scope.filesVM.cancel();
+
+    // Digest
+    scope.$apply();
+
+    // Should trigger cancel
+    expect(spy.calledWith('invenio.uploader.upload.canceled')).to.be.true;
   });
 });

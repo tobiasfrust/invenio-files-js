@@ -42,7 +42,7 @@ var sourceDirectory = path.join(rootDirectory, './src');
 var sourceFiles = [
 
   // Make sure module files are handled first
-  path.join(sourceDirectory, '/**/*.module.js'),
+  path.join(sourceDirectory, '/*.js'),
 
   // Then add all JavaScript files
   path.join(sourceDirectory, '/**/*.js'),
@@ -80,6 +80,8 @@ gulp.task('build.src', function() {
   gulp.src(sourceFiles)
     .pipe(plugins.plumber())
     .pipe(plugins.concat('invenio-files-js.js'))
+    .pipe(plugins.stripComments())
+    .pipe(plugins.header(licences.javascript))
     .pipe(gulp.dest('./dist/'))
     .pipe(plugins.uglify())
     .pipe(plugins.rename('invenio-files-js.min.js'))
@@ -131,12 +133,18 @@ gulp.task('coveralls', function () {
  * Demo
  */
 
-gulp.task('demo', function() {
+// run the demo
+gulp.task('demo.run', function() {
   gulp.src(rootDirectory)
     .pipe(plugins.webserver({
       livereload: true,
       open: '/examples/index.html'
   }));
+});
+
+// run build and then the demo
+gulp.task('demo', function(done) {
+  runSequence('build', 'demo.run', done);
 });
 
 /**

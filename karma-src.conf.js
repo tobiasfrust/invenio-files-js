@@ -53,9 +53,10 @@ module.exports = function(config) {
       'node_modules/angular-mocks/angular-mocks.js',
       'node_modules/underscore/underscore.js',
       'node_modules/ng-file-upload/dist/ng-file-upload-all.min.js',
+      'src/*/*.js',
       'src/**/*.js',
       'src/**/*.html',
-      'test/e2e/**/*.js',
+      'test/**/**/*.js',
     ],
 
 
@@ -73,8 +74,12 @@ module.exports = function(config) {
 
     // Coverage reporter
     coverageReporter: {
-      type: 'lcov',
-      dir: 'coverage/'
+      dir: 'coverage/',
+      reporters: [
+        {type: 'text'},
+        {type: 'html', subdir: 'report-html'},
+        {type: 'lcov', subdir: 'report-lcov'}
+      ]
     },
 
 
