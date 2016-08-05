@@ -37,8 +37,8 @@ cp -r docs/* gh-pages
 cd gh-pages
 
 # set the user to invenio-developer
-git config user.name "UPDATE_WITH_DOCS_USER"
-git config user.email "UPDATE_WITH_DOCS_USER_EMAIL"
+git config user.name "invenio-developers"
+git config user.email "info@inveniosoftware.org"
 
 # add and commit
 git add .
