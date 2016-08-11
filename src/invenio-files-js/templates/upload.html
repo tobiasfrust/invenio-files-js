@@ -1,7 +1,7 @@
 <div class="well"
   ngf-drag-over-class="'dragover'"
-  ngf-drop="filesVM.addFiles($files)"
-  ngf-keep="'distinct'"
+  ngf-drop=""
+  ngf-change="filesVM.addFiles($newFiles)"
   ngf-max-size="20GB"
   ngf-multiple="true"
 >
@@ -12,10 +12,10 @@
 <p class="text-center legend"><strong>— OR —</strong></p>
 <p class="text-center">
   <button  class="btn btn-primary"
-    ngf-keep="'distinct'"
     ngf-max-size="20GB"
     ngf-multiple="true"
-    ngf-select="filesVM.addFiles($files)"
+    ngf-select=""
+    ngf-change="filesVM.addFiles($newFiles)"
   >
     Click to select
   </button>

@@ -170,7 +170,7 @@ function InvenioFilesUploaderModel($rootScope, $q, InvenioFilesAPI) {
               function(response) {
                 var params = (response.data.links === undefined) ? _obj.uploadArgs.url : response;
                 _obj.successCallback
-                  .call(this, params)
+                  .call(this, params, file)
                   .then(
                     function(response) {
                       $rootScope.$emit(
@@ -219,7 +219,7 @@ function InvenioFilesUploaderModel($rootScope, $q, InvenioFilesAPI) {
   Uploader.prototype._upload = function (file) {
     var deferred = $q.defer();
     var that = this;
-    if (file.size < this.args.resumeChunkSize) {
+    if (this.args.resumeChunkSize === undefined || file.size < this.args.resumeChunkSize) {
       $rootScope.$emit(
         'invenio.uploader.upload.file.chunked.requested', file
       );
@@ -257,8 +257,10 @@ function InvenioFilesUploaderModel($rootScope, $q, InvenioFilesAPI) {
     return deferred.promise;
   };
 
-  Uploader.prototype.postChunkUploadProcess = function(url) {
+  Uploader.prototype.postChunkUploadProcess = function(url, file) {
     var deferred = $q.defer();
+    // Add processing state to the file
+    $rootScope.$emit('invenio.uploader.upload.file.processing', {file: file});
     // Finishing up the chunk upload
     InvenioFilesAPI.request({
       method: 'POST',
@@ -271,7 +273,7 @@ function InvenioFilesUploaderModel($rootScope, $q, InvenioFilesAPI) {
     return deferred.promise;
   };
 
-  Uploader.prototype.postNormalUploadProcess = function(obj) {
+  Uploader.prototype.postNormalUploadProcess = function(obj, file) {
     var deferred = $q.defer();
     deferred.resolve(obj);
     return deferred.promise;

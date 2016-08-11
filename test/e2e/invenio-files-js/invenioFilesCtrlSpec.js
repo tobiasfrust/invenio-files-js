@@ -79,7 +79,7 @@ describe('Unit: testing the module', function() {
     },
     'is_head': true,
     'created': '2016-07-07T15:23:54.189913+00:00',
-    'version_id': '3e0c214a-82a6-4c6a-bae4-55ed1e4fa182',
+    'version_id': 'v-e-r',
     'delete_marker': false,
     'key': 'dare_devil.pdf',
     'size': 900000
@@ -223,11 +223,20 @@ describe('Unit: testing the module', function() {
       },
       progress: 20
     });
-
     // Digest
     scope.$digest();
     // Expect the file to be completed
     expect(scope.filesVM.files[4].progress).to.be.equal(20);
+    // Update the processing
+    $rootScope.$broadcast('invenio.uploader.upload.file.processing', {
+      file: {
+        name: 'jessica_jones.pdf'
+      }
+    });
+    // Digest
+    scope.$digest();
+    // Expect the file to be completed
+    expect(scope.filesVM.files[2].processing).to.be.equal(true);
   });
 
   it('should error the uploader with event', function() {
@@ -352,7 +361,7 @@ describe('Unit: testing the module', function() {
     $httpBackend.when('POST', '/api/init')
       .respond(200, _links);
 
-    $httpBackend.when('DELETE', '/api/bucket_id/dare_devil.pdf')
+    $httpBackend.when('DELETE', '/api/bucket_id/dare_devil.pdf?versionId=v-e-r')
       .respond(200, {});
 
     $httpBackend.when('DELETE', '/api/bucket_id/jessica_jones.pdf')
@@ -457,9 +466,6 @@ describe('Unit: testing the module', function() {
 
     // Digest
     scope.$digest();
-
-    // Should trigger init
-    expect(spy.calledWith('invenio.uploader.warning')).to.be.true;
 
     // Still should have only one file
     expect(template.find('.sel-file').length).to.be.equal(1);

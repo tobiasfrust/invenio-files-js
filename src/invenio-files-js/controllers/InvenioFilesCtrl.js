@@ -168,7 +168,10 @@ function InvenioFilesCtrl($rootScope, $scope, $q, $timeout,
       // Prepare parameters
       var args = angular.copy(vm.invenioFilesArgs);
       args.method = 'DELETE';
-      args.url = file.links.self;
+      // Make sure if the file is not multipart to delete the
+      // specific ``version_id``
+      args.url = (file.mutlipart !== true && file.version_id) ?
+        file.links.self + '?versionId=' + file.version_id : file.links.self;
       InvenioFilesAPI.request(args).then(function(response) {
         // Just remove it from the list
         vm.files.splice(_.indexOf(vm.files, file), 1);
@@ -194,7 +197,8 @@ function InvenioFilesCtrl($rootScope, $scope, $q, $timeout,
       size: file.size,
       type: file.type,
       lastModified: file.lastModified,
-      lastModifiedDate: file.lastModifiedDate
+      lastModifiedDate: file.lastModifiedDate,
+      multipart: (file.size > vm.invenioFilesArgs.resumeChunkSize) ? true : false
     };
   }
 
@@ -207,15 +211,10 @@ function InvenioFilesCtrl($rootScope, $scope, $q, $timeout,
     _.each(files, function(file, index) {
       if (_.findWhere(vm.files, {name: file.name}) === undefined) {
         var _file = fileReducer(file);
+        // Add files to the model
         vm.files.push(_file);
         // Added to queue
         Uploader.pushToQueue(file);
-      } else {
-        $scope.$broadcast('invenio.uploader.warning', {
-          data: {
-            message: 'Duplicate file '+ file.name,
-          }
-        });
       }
     });
   }
@@ -290,6 +289,19 @@ function InvenioFilesCtrl($rootScope, $scope, $q, $timeout,
   }
 
   /**
+    * When the file chunk is processing
+    * @memberof InvenioFilesCtrl
+    * @function fileUplaodedProcessing
+    */
+  function fileUploadedProcessing(evnt, data) {
+    var index = findInFiles(data.file.name);
+    if (index > -1) {
+      delete vm.files[index].progress;
+      vm.files[index].processing = true;
+    }
+  }
+
+  /**
     * When the app has error
     * @memberof InvenioFilesCtrl
     * @function invenioFilesError
@@ -297,16 +309,6 @@ function InvenioFilesCtrl($rootScope, $scope, $q, $timeout,
   function invenioFilesError(evt, data) {
     vm.invenioFilesError = {};
     vm.invenioFilesError = data;
-  }
-
-  /**
-    * When the app has warning
-    * @memberof InvenioFilesCtrl
-    * @function invenioFilesWarning
-    */
-  function invenioFilesWarning(evt, data) {
-    vm.invenioFilesWarning = {};
-    vm.invenioFilesWarning = data;
   }
 
   /**
@@ -401,7 +403,6 @@ function InvenioFilesCtrl($rootScope, $scope, $q, $timeout,
 
   // General uplaoder events
   $scope.$on('invenio.uploader.error', invenioFilesError);
-  $scope.$on('invenio.uploader.warning', invenioFilesWarning);
 
   // Global file event
   $rootScope.$on(
@@ -412,6 +413,10 @@ function InvenioFilesCtrl($rootScope, $scope, $q, $timeout,
 
   $rootScope.$on(
     'invenio.uploader.upload.file.progress', fileUploadedProgress
+  );
+
+  $rootScope.$on(
+    'invenio.uploader.upload.file.processing', fileUploadedProcessing
   );
 
   // Global upload event

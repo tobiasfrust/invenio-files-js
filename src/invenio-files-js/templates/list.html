@@ -27,8 +27,9 @@
       <td>{{ f.size | bytesToHumanReadable }}</td>
       <td class="text-center">
         <span ng-show="f.progress < 100 && !f.errored">{{ f.progress }} %</span>
+        <span ng-show="f.processing && !f.errored">Processing...</span>
         <span ng-show="f.errored" class="text-danger">Error</span>
-        <span ng-show="f.progress == 100 && !f.errored" class="text-success">{{ f.completed ? '✓' : '' }}</span>
+        <span ng-show="f.progress == 100 && !f.processing && !f.errored" class="text-success">{{ f.completed ? '✓' : '' }}</span>
       </td>
       <td ng-show="f" class="text-center"><a ng-click="filesVM.remove(f)">✗</a></td>
     </tr>
