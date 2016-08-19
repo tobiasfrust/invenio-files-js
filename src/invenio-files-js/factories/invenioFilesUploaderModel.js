@@ -161,7 +161,7 @@ function InvenioFilesUploaderModel($rootScope, $q, InvenioFilesAPI) {
       that._upload(file)
         .then(function(_obj) {
           var upload = InvenioFilesAPI
-            .upload(_obj.uploadArgs);
+            .upload(_obj.uploadArgs, _obj.multipartUpload);
           // Emit
           $rootScope.$emit('invenio.uploader.upload.file.init', file);
           // Add the upload to the list
@@ -190,7 +190,7 @@ function InvenioFilesUploaderModel($rootScope, $q, InvenioFilesAPI) {
               }, function(evt) {
                 var progress = parseInt(100.0 * evt.loaded / evt.total, 10);
                 var params = {
-                  file: evt.config.data.file,
+                  file: evt.config.data.file || evt.config.data,
                   progress: progress > 100 ? 100 : progress
                 };
                 $rootScope.$emit(
@@ -221,28 +221,29 @@ function InvenioFilesUploaderModel($rootScope, $q, InvenioFilesAPI) {
     var that = this;
     if (this.args.resumeChunkSize === undefined || file.size < this.args.resumeChunkSize) {
       $rootScope.$emit(
-        'invenio.uploader.upload.file.chunked.requested', file
+        'invenio.uploader.upload.file.normal.requested', file
       );
       // Prepare args
-      var args = that._prepareRequest(file.name, 'PUT');
+      var args = that._prepareRequest(file, 'PUT');
       // Add the file
-      args.data.file = file;
+      args.data = file;
       // Resolve the request
       deferred.resolve({
         uploadArgs: args,
+        multipartUpload: false,
         successCallback: that.postNormalUploadProcess
       });
     } else {
       $rootScope.$emit(
-        'invenio.uploader.upload.file.normal.requested', file
+        'invenio.uploader.upload.file.chunked.requested', file
       );
-      var _args = that._prepareRequest(file.name, 'POST');
+      var _args = that._prepareRequest(file, 'POST');
       // Add the file
       _args.data.file = file;
       // Request upload id
       that._requestUploadID(_args)
         .then(function(response) {
-          var _requestArgs = that._prepareRequest(file.name, 'PUT');
+          var _requestArgs = that._prepareRequest(file, 'PUT');
           // Append the file
           _requestArgs.data.file = file;
           // Append the url
@@ -250,6 +251,7 @@ function InvenioFilesUploaderModel($rootScope, $q, InvenioFilesAPI) {
           // Resolve the request
           deferred.resolve({
             uploadArgs: _requestArgs,
+            multipartUpload: true,
             successCallback: that.postChunkUploadProcess
           });
         });
@@ -284,10 +286,11 @@ function InvenioFilesUploaderModel($rootScope, $q, InvenioFilesAPI) {
     return InvenioFilesAPI.request(args);
   };
 
-  Uploader.prototype._prepareRequest = function(name, method) {
+  Uploader.prototype._prepareRequest = function(file, method) {
     var args = angular.copy(this.args);
-    args.url = args.url + '/' + name;
+    args.url = args.url + '/' + file.name;
     args.method = method || 'POST';
+    args.headers['Content-Type'] = file.type;
     return args;
   };
 

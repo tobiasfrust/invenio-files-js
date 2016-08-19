@@ -275,7 +275,10 @@ function InvenioFilesCtrl($rootScope, $scope, $q, $timeout,
     * @function fileUplaodedError
     */
   function fileUploadedError(evnt, data) {
-    var index = findInFiles(data.config.data.file.name);
+    var index = findInFiles(
+      data.config.data.file !== undefined ?
+        data.config.data.file.name : data.config.data.name
+    );
     if (index > -1) {
       vm.files[index].errored = true;
       delete vm.files[index].processing;
@@ -289,7 +292,9 @@ function InvenioFilesCtrl($rootScope, $scope, $q, $timeout,
     * @function fileUplaodedProgress
     */
   function fileUploadedProgress(evnt, data) {
-    var index = findInFiles(data.file.name);
+    var index = findInFiles(
+      data.file !== undefined ? data.file.name : data.name
+    );
     if (index > -1) {
       vm.files[index].progress = data.progress;
     }

@@ -36,9 +36,13 @@ function InvenioFilesAPI($http, Upload) {
     * Start upload
     * @memberof InvenioFilesAPI
     * @param {object} args - The upload parameters.
+    * @param {boolean} multipartUpload - If the upload is multipart.
     */
-  function upload(args) {
-    return Upload.upload(args);
+  function upload(args, multipartUpload) {
+    if (multipartUpload) {
+      return Upload.upload(args);
+    }
+      return Upload.http(args);
   }
 
   /**

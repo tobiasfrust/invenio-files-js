@@ -364,6 +364,9 @@ describe('Unit: testing the module', function() {
     $httpBackend.when('DELETE', '/api/bucket_id/dare_devil.pdf?versionId=v-e-r')
       .respond(200, {});
 
+    $httpBackend.when('DELETE', '/api/bucket_id/dare_devil.pdf')
+      .respond(200, {});
+
     $httpBackend.when('DELETE', '/api/bucket_id/jessica_jones.pdf')
       .respond(403, {});
 
