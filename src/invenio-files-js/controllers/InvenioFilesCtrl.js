@@ -259,6 +259,7 @@ function InvenioFilesCtrl($rootScope, $scope, $q, $timeout,
     var index = findInFiles(_obj.key);
     if (index > -1) {
       vm.files[index].completed = true;
+      delete vm.files[index].processing;
       vm.files[index] = angular.merge(
         {},
         vm.files[index],
@@ -277,6 +278,7 @@ function InvenioFilesCtrl($rootScope, $scope, $q, $timeout,
     var index = findInFiles(data.config.data.file.name);
     if (index > -1) {
       vm.files[index].errored = true;
+      delete vm.files[index].processing;
       $scope.$broadcast('invenio.uploader.error', data);
     }
   }
