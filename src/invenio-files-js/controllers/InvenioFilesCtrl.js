@@ -168,10 +168,15 @@ function InvenioFilesCtrl($rootScope, $scope, $q, $timeout,
       // Prepare parameters
       var args = angular.copy(vm.invenioFilesArgs);
       args.method = 'DELETE';
-      // Make sure if the file is not multipart to delete the
-      // specific ``version_id``
-      args.url = (file.mutlipart !== true && file.version_id) ?
-        file.links.self + '?versionId=' + file.version_id : file.links.self;
+
+      if (file.multipart === true) {
+        args.url = (file.completed && file.links.object_version) ?
+          file.links.object_version : file.links.self;
+      } else {
+        args.url = (file.links.version) ?
+          file.links.version : file.links.self;
+      }
+
       InvenioFilesAPI.request(args).then(function(response) {
         // Just remove it from the list
         vm.files.splice(_.indexOf(vm.files, file), 1);
