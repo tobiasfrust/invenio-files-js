@@ -1,6 +1,6 @@
 {
   "name": "invenio-files-js",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Invenio JS for uploading files",
   "author": {
     "name": "CERN",

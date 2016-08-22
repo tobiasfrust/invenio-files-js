@@ -1,8 +1,8 @@
 ===========================
- Invenio-Files-JS v0.0.1
+ Invenio-Files-JS v0.0.2
 ===========================
 
-Invenio-Files-JS v0.0.1 was released on August 04, 2016.
+Invenio-Files-JS v0.0.2 was released on August 28, 2016.
 
 About
 -----
@@ -14,7 +14,15 @@ Invenio-Files client library for building the web UI.
 What's new
 ----------
 
-- Invenio-Deposit integration
+- Improves upload speed of large files by streaming files directly in the
+  request body.
+
+- Updates query arguments to latest changes in Invenio-Files-REST.
+
+- Changes deletion to support version removal in both chunked and
+  non-chunked mode.
+
+- Adds processing state to show file merging on multipart upload completion.
 
 Installation
 ------------
