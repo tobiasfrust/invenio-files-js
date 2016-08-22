@@ -65,7 +65,8 @@ function InvenioFilesCtrl($rootScope, $scope, $q, $timeout,
         method: 'POST',
         url: vm.invenioFilesEndpoints.initialization,
         data: {},
-        headers: vm.invenioFilesArgs.headers || {}
+        headers: (vm.invenioFilesArgs.headers !== undefined) ?
+          vm.invenioFilesArgs.headers : {}
       }).then(function success(response) {
         // Get the bucket
         vm.invenioFilesArgs.url = response.data.links.bucket;

@@ -103,7 +103,7 @@ describe('Unit: testing the module', function() {
     var _t = '<invenio-files-uploader ' +
         'method="PUT" ' +
         api +
-        ' extra-params=\'{"resumeChunkSize": 9000000}\' ' +
+        ' extra-params=\'{"resumeChunkSize": 9000000, "headers": {"fight": "Jessica Jones v. Harley Quinn"}}\' ' +
         'files=\'[{"name": "Jessica Jones.pdf", "size": "2500000", "completed": true, "progress": 100}]\' ' +
       '>' +
         '<invenio-files-error ' +
@@ -201,7 +201,12 @@ describe('Unit: testing the module', function() {
     // Should initialize endpoints on request
     expect(scope.filesVM.invenioFilesEndpoints.self)
       .to.be.equal(_links.links.self);
-
+    var _headers = {
+      'Content-Type': 'application/json',
+      fight: 'Jessica Jones v. Harley Quinn'
+    };
+    expect(scope.filesVM.invenioFilesArgs.headers)
+      .to.deep.equal(_headers);
     // Upload files
     uploadFiles();
 
