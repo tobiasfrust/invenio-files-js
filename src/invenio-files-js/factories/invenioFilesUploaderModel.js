@@ -280,7 +280,7 @@ function InvenioFilesUploaderModel($rootScope, $q, InvenioFilesAPI) {
   };
 
   Uploader.prototype._requestUploadID = function(args) {
-    args.url = args.url+'?uploads&size='+ args.data.file.size + '&part_size='+ args.resumeChunkSize;
+    args.url = args.url+'?uploads&size='+ args.data.file.size + '&partSize='+ args.resumeChunkSize;
     return InvenioFilesAPI.request(args);
   };
 
