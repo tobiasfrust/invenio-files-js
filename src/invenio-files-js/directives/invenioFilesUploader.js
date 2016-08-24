@@ -51,19 +51,21 @@ function invenioFilesUploader() {
   function link(scope, element, attrs, vm) {
     // Get the endpoints for schemas
     var endpoints = {
-      bucket: attrs.bucket || undefined,
       initialization: attrs.initialization || undefined,
     };
-
+    // Extra ``$http`` parameters
     var params = JSON.parse(attrs.extraParams || '{}');
-
+    // Existing files to display
     var files = JSON.parse(attrs.files || '[]');
+    // The endpoint links
+    var links = JSON.parse(attrs.links || '[]');
 
     // Brodcast ready to initialization
-    scope.$broadcast('invenio.uploader.initialazation',
+    scope.$broadcast('invenio.uploader.init',
       params,
       endpoints,
-      files
+      files,
+      links
     );
   }
 

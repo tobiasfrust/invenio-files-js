@@ -111,17 +111,23 @@ function InvenioFilesCtrl($rootScope, $scope, $q, $timeout,
   }
 
   /**
-    * Initialize the uploader
-    * @memberof InvenioFilesCtrl
-    * @function invenioUploaderInitialization
+    * Initialize the controller
+    * @memberof InvenioRecordsCtrl
+    * @function invenioRecordsInit
+    * @param {Object} evt - The event object.
+    * @param {Object} params - The invenio records arguments.
+    * @param {Object} endpoints - The invenio endpoints for actions.
+    * @param {Object} files - The already uploaded files.
+    * @param {Object} links - The record action links.
     */
-  function invenioUploaderInitialization(evt, params, endpoints, files) {
+  function invenioUploaderInit(evt, params, endpoints, files, links) {
     // Do initialization
     vm.invenioFilesArgs = angular.merge(
       {},
       vm.invenioFilesArgs,
       params
     );
+
     // Add the entpoints
     vm.invenioFilesEndpoints = angular.merge(
       {},
@@ -129,6 +135,11 @@ function InvenioFilesCtrl($rootScope, $scope, $q, $timeout,
       endpoints
     );
 
+    if (Object.keys(links).length > 0) {
+      $rootScope.$broadcast(
+        'invenio.records.endpoints.updated', links
+      );
+    }
     // Add any files on initialization
     vm.files = files;
   }
@@ -199,12 +210,9 @@ function InvenioFilesCtrl($rootScope, $scope, $q, $timeout,
   function fileReducer(file) {
     return {
       key: file.name,
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      lastModified: file.lastModified,
-      lastModifiedDate: file.lastModifiedDate,
-      multipart: (file.size > vm.invenioFilesArgs.resumeChunkSize) ? true : false
+      uri: false,
+      multipart: (vm.invenioFilesArgs.resumeChunkSize === undefined ||
+        file.size < vm.invenioFilesArgs.resumeChunkSize) ? false : true,
     };
   }
 
@@ -214,11 +222,14 @@ function InvenioFilesCtrl($rootScope, $scope, $q, $timeout,
     * @function addFiles
     */
   function addFiles(files) {
-    _.each(files, function(file, index) {
-      if (_.findWhere(vm.files, {name: file.name}) === undefined) {
-        var _file = fileReducer(file);
+    angular.forEach(files, function(file, index) {
+      if (_.findWhere(vm.files, {key: file.key}) === undefined) {
+        // Add any extra metadata to the File object
+        angular.forEach(fileReducer(file), function(value, key) {
+          file[key] = value;
+        });
         // Add files to the model
-        vm.files.push(_file);
+        vm.files.push(file);
         // Added to queue
         Uploader.pushToQueue(file);
       }
@@ -260,7 +271,9 @@ function InvenioFilesCtrl($rootScope, $scope, $q, $timeout,
     var index = findInFiles(_obj.key);
     if (index > -1) {
       vm.files[index].completed = true;
+      // Delete processing state
       delete vm.files[index].processing;
+      // Move it to a normal object
       vm.files[index] = angular.merge(
         {},
         vm.files[index],
@@ -268,7 +281,6 @@ function InvenioFilesCtrl($rootScope, $scope, $q, $timeout,
       );
     }
   }
-
 
   /**
     * When the files has been uploaded have errors
@@ -278,10 +290,11 @@ function InvenioFilesCtrl($rootScope, $scope, $q, $timeout,
   function fileUploadedError(evnt, data) {
     var index = findInFiles(
       data.config.data.file !== undefined ?
-        data.config.data.file.name : data.config.data.name
+        data.config.data.file.key : data.config.data.key
     );
     if (index > -1) {
       vm.files[index].errored = true;
+      // Delete processing state
       delete vm.files[index].processing;
       $scope.$broadcast('invenio.uploader.error', data);
     }
@@ -294,7 +307,7 @@ function InvenioFilesCtrl($rootScope, $scope, $q, $timeout,
     */
   function fileUploadedProgress(evnt, data) {
     var index = findInFiles(
-      data.file !== undefined ? data.file.name : data.name
+      data.file !== undefined ? data.file.key : data.key
     );
     if (index > -1) {
       vm.files[index].progress = data.progress;
@@ -307,7 +320,7 @@ function InvenioFilesCtrl($rootScope, $scope, $q, $timeout,
     * @function fileUplaodedProcessing
     */
   function fileUploadedProcessing(evnt, data) {
-    var index = findInFiles(data.file.name);
+    var index = findInFiles(data.file.key);
     if (index > -1) {
       delete vm.files[index].progress;
       vm.files[index].processing = true;
@@ -351,25 +364,30 @@ function InvenioFilesCtrl($rootScope, $scope, $q, $timeout,
     * @function reinitializeUploader
     */
   function reinitializeUploader() {
-    _.each(vm.files, function(file, index) {
+    angular.forEach(vm.files, function(file, index) {
       // Clean progress and error
       if (file.progress !== undefined && file.progress < 100) {
-        // Those are incomplete send DELETE request
-        var args = angular.copy(vm.invenioFilesArgs);
-        args.method = 'DELETE';
-        args.url = args.url + '/' + file.key;
-        InvenioFilesAPI.request(args).then(function(response) {
-          // Just remove it from the list
-          $scope.$broadcast('invenio.uploader.file.deleted', file);
-          // Reinit the file
-          delete vm.files[index].progress;
-          delete vm.files[index].errored;
-        }, function(response) {
-          $scope.$broadcast('invenio.uploader.error', response);
-        });
+        // If the file is ``multipart`` then send a ``DELETE`` request
+        if (file.multipart) {
+          // Those are incomplete send DELETE request
+          var args = angular.copy(vm.invenioFilesArgs);
+          args.method = 'DELETE';
+          args.url = file.links.self;
+          InvenioFilesAPI.request(args).then(function(response) {
+            // Just remove it from the list
+            $scope.$broadcast('invenio.uploader.file.deleted', file);
+          }, function(response) {
+            // If the error is `-1` is because of cancel action
+            $scope.$broadcast('invenio.uploader.error', response);
+          });
+        }
+        // Reinit the file
+        delete vm.files[index].progress;
+        delete vm.files[index].processing;
+        delete vm.files[index].errored;
       }
       if (file.completed === undefined) {
-        Uploader.pushToQueue(file);
+        Uploader.pushToQueue(vm.files[index]);
       }
     });
   }
@@ -409,10 +427,7 @@ function InvenioFilesCtrl($rootScope, $scope, $q, $timeout,
   // Listeners
 
   // Initialize the uploader
-  $scope.$on(
-    'invenio.uploader.initialazation',
-    invenioUploaderInitialization
-  );
+  $scope.$on('invenio.uploader.init', invenioUploaderInit);
 
   // General uplaoder events
   $scope.$on('invenio.uploader.error', invenioFilesError);
@@ -423,11 +438,9 @@ function InvenioFilesCtrl($rootScope, $scope, $q, $timeout,
   );
   $rootScope.$on(
     'invenio.uploader.upload.file.errored', fileUploadedError);
-
   $rootScope.$on(
     'invenio.uploader.upload.file.progress', fileUploadedProgress
   );
-
   $rootScope.$on(
     'invenio.uploader.upload.file.processing', fileUploadedProcessing
   );

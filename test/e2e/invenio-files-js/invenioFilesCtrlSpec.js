@@ -37,7 +37,6 @@ describe('Unit: testing the module', function() {
   // Add some files for upload
   var _files = [
     {
-      key: 'dare_devil.pdf',
       name: 'dare_devil.pdf',
       size: 900000,
       type: 'application/pdf',
@@ -45,7 +44,6 @@ describe('Unit: testing the module', function() {
       lastModifiedDate: '2016-06-01T12:43:55.000Z'
     },
     {
-      key: 'jessica_jones.pdf',
       name: 'jessica_jones.pdf',
       size: 9999999999999999,
       type: 'application/pdf',
@@ -53,7 +51,6 @@ describe('Unit: testing the module', function() {
       lastModifiedDate: '2016-06-01T12:43:55.000Z'
     },
     {
-      key: 'the_punisher.pdf',
       name: 'the_punisher.pdf',
       size: 9999999999,
       type: 'application/pdf',
@@ -61,7 +58,6 @@ describe('Unit: testing the module', function() {
       lastModifiedDate: '2016-06-01T12:43:55.000Z'
     },
     {
-      key: 'harley_quinn.pdf',
       name: 'harley_quinn.pdf',
       size: 9,
       type: 'application/pdf',
@@ -104,7 +100,7 @@ describe('Unit: testing the module', function() {
         'method="PUT" ' +
         api +
         ' extra-params=\'{"resumeChunkSize": 9000000, "headers": {"fight": "Jessica Jones v. Harley Quinn"}}\' ' +
-        'files=\'[{"name": "Jessica Jones.pdf", "size": "2500000", "completed": true, "progress": 100}]\' ' +
+        'files=\'[{"key": "Jessica Jones.pdf", "size": "2500000", "completed": true, "progress": 100}]\' ' +
       '>' +
         '<invenio-files-error ' +
           'template="src/invenio-files-js/templates/error.html" ' +
@@ -125,7 +121,7 @@ describe('Unit: testing the module', function() {
   function uploadFiles() {
     scope.filesVM.addFiles(_files);
     // Digest
-    scope.$digest();
+    scope.$apply();
     // 5 files on the UI
     expect(template.find('.sel-file').length).to.be.equal(5);
     // Check also in the controller
@@ -190,7 +186,7 @@ describe('Unit: testing the module', function() {
     // One preloaded file
     expect(template.find('.sel-file').length).to.be.equal(1);
     // Should trigger init
-    expect(spy.calledWith('invenio.uploader.initialazation')).to.be.true;
+    expect(spy.calledWith('invenio.uploader.init')).to.be.true;
 
     scope.$broadcast('invenio.records.endpoints.updated', _links.links);
 
@@ -224,7 +220,7 @@ describe('Unit: testing the module', function() {
     // Update the progress
     $rootScope.$broadcast('invenio.uploader.upload.file.progress', {
       file: {
-        name: 'harley_quinn.pdf'
+        key: 'harley_quinn.pdf'
       },
       progress: 20
     });
@@ -235,7 +231,7 @@ describe('Unit: testing the module', function() {
     // Update the processing
     $rootScope.$broadcast('invenio.uploader.upload.file.processing', {
       file: {
-        name: 'jessica_jones.pdf'
+        key: 'jessica_jones.pdf'
       }
     });
     // Digest
@@ -258,7 +254,7 @@ describe('Unit: testing the module', function() {
     // One preloaded file
     expect(template.find('.sel-file').length).to.be.equal(1);
     // Should trigger init
-    expect(spy.calledWith('invenio.uploader.initialazation')).to.be.true;
+    expect(spy.calledWith('invenio.uploader.init')).to.be.true;
 
     scope.$broadcast('invenio.records.endpoints.updated', _links.links);
 
@@ -308,7 +304,7 @@ describe('Unit: testing the module', function() {
     // Digest
     scope.$digest();
     // Should trigger init
-    expect(spy.calledWith('invenio.uploader.initialazation')).to.be.true;
+    expect(spy.calledWith('invenio.uploader.init')).to.be.true;
 
     // Upload files
     uploadFiles();
@@ -343,7 +339,7 @@ describe('Unit: testing the module', function() {
     // Digest
     scope.$digest();
     // Should trigger init
-    expect(spy.calledWith('invenio.uploader.initialazation')).to.be.true;
+    expect(spy.calledWith('invenio.uploader.init')).to.be.true;
 
     // Upload files
     uploadFiles();
@@ -387,7 +383,7 @@ describe('Unit: testing the module', function() {
     // Digest
     scope.$digest();
     // Should trigger init
-    expect(spy.calledWith('invenio.uploader.initialazation')).to.be.true;
+    expect(spy.calledWith('invenio.uploader.init')).to.be.true;
 
     // Upload files
     uploadFiles();
@@ -464,11 +460,11 @@ describe('Unit: testing the module', function() {
     scope.$digest();
 
     // Should trigger init
-    expect(spy.calledWith('invenio.uploader.initialazation')).to.be.true;
+    expect(spy.calledWith('invenio.uploader.init')).to.be.true;
 
     // try to upload a file with the some name
     var file = {
-      name: 'Jessica Jones.pdf'
+      key: 'Jessica Jones.pdf'
     };
     scope.filesVM.addFiles([file]);
 
@@ -493,7 +489,7 @@ describe('Unit: testing the module', function() {
     scope.$digest();
 
     // Should trigger init
-    expect(spy.calledWith('invenio.uploader.initialazation')).to.be.true;
+    expect(spy.calledWith('invenio.uploader.init')).to.be.true;
 
     expect(scope.filesVM.invenioFilesBusy).to.be.false;
 
@@ -542,7 +538,7 @@ describe('Unit: testing the module', function() {
     scope.$digest();
 
     // Should trigger init
-    expect(spy.calledWith('invenio.uploader.initialazation')).to.be.true;
+    expect(spy.calledWith('invenio.uploader.init')).to.be.true;
 
     // Upload files
     uploadFiles();
@@ -576,9 +572,6 @@ describe('Unit: testing the module', function() {
 
     // Expect the file to be completed
     expect(scope.filesVM.files[1].completed).to.be.true;
-
-    // Should trigger init
-    expect(spy.calledWith('invenio.uploader.error')).to.be.true;
 
     // Should trigger init
     expect(spy.calledWith('invenio.uploader.file.deleted')).to.be.true;

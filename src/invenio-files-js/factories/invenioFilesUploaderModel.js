@@ -282,15 +282,20 @@ function InvenioFilesUploaderModel($rootScope, $q, InvenioFilesAPI) {
   };
 
   Uploader.prototype._requestUploadID = function(args) {
-    args.url = args.url+'?uploads&size='+ args.data.file.size + '&partSize='+ args.resumeChunkSize;
+    args.params = {
+      uploads: 1,
+      size: args.data.file.size,
+      partSize: args.resumeChunkSize
+    };
     return InvenioFilesAPI.request(args);
   };
 
   Uploader.prototype._prepareRequest = function(file, method) {
     var args = angular.copy(this.args);
-    args.url = args.url + '/' + file.name;
+    args.url = args.url + '/' + file.key;
     args.method = method || 'POST';
-    args.headers['Content-Type'] = file.type;
+    args.headers['Content-Type'] = (file.type || '').indexOf('/') > -1 ?
+      file.type : '';
     return args;
   };
 

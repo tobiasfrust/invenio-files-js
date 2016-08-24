@@ -23,7 +23,7 @@
       <th class="text-center">Actions</th>
     </tr>
     <tr class="sel-file" ng-repeat="f in filesVM.files | filter:fileSearch">
-      <td>{{ f.name | limitTo:50 }} <span ng-show="f.name.length > 50">...</span></td>
+      <td>{{ f.key | limitTo:40 }} <span ng-show="f.key.length > 50">...</span></td>
       <td>{{ f.size | bytesToHumanReadable }}</td>
       <td class="text-center">
         <span ng-show="f.progress < 100 && !f.errored">{{ f.progress }} %</span>
