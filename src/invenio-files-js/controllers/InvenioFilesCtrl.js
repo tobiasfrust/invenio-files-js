@@ -65,8 +65,7 @@ function InvenioFilesCtrl($rootScope, $scope, $q, $timeout,
         method: 'POST',
         url: vm.invenioFilesEndpoints.initialization,
         data: {},
-        headers: (vm.invenioFilesArgs.headers !== undefined) ?
-          vm.invenioFilesArgs.headers : {}
+        headers: vm.invenioFilesArgs.headers || {}
       }).then(function success(response) {
         // Get the bucket
         vm.invenioFilesArgs.url = response.data.links.bucket;
@@ -181,7 +180,9 @@ function InvenioFilesCtrl($rootScope, $scope, $q, $timeout,
       var args = angular.copy(vm.invenioFilesArgs);
       args.method = 'DELETE';
 
-      if (file.multipart === true) {
+      if (!file.links) {
+        args.url = Uploader._prepareRequest(file.name).url;
+      } else if (file.multipart === true) {
         args.url = (file.completed && file.links.object_version) ?
           file.links.object_version : file.links.self;
       } else {
@@ -403,6 +404,15 @@ function InvenioFilesCtrl($rootScope, $scope, $q, $timeout,
     reinitializeUploader();
   }
 
+  /**
+  * Push a file to the upload queue
+  * @memberof InvenioFilesCtrl
+  * @function pushToQueue
+  */
+  function pushToQueue(file) {
+    return Uploader.pushToQueue(file);
+  }
+
   ////////////
 
   // Add file to the list
@@ -421,6 +431,8 @@ function InvenioFilesCtrl($rootScope, $scope, $q, $timeout,
   vm.remove = removeFile;
   // Start the upload
   vm.upload = upload;
+  // Push to upload queue
+  vm.pushToQueue = pushToQueue;
 
   ////////////
 

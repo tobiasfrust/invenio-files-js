@@ -31,7 +31,7 @@
   * @description
   *     Create a model to handle the uploads
   */
-function InvenioFilesUploaderModel($rootScope, $q, InvenioFilesAPI) {
+function InvenioFilesUploaderModel($rootScope, $q, $interval, InvenioFilesAPI) {
 
   function Uploader(args) {
     this.args = angular.copy(args || {});
@@ -168,8 +168,9 @@ function InvenioFilesUploaderModel($rootScope, $q, InvenioFilesAPI) {
           that.addUpload(upload);
           upload.then(
               function(response) {
-                var params = (response.data.links === undefined) ? _obj.uploadArgs.url : response;
-                _obj.successCallback
+                var params = (response.data.links === undefined &&
+                response.data.upload_key === undefined) ? _obj.uploadArgs.url : response;
+                return _obj.successCallback
                   .call(this, params, file)
                   .then(
                     function(response) {
@@ -182,7 +183,7 @@ function InvenioFilesUploaderModel($rootScope, $q, InvenioFilesAPI) {
                         'invenio.uploader.upload.file.errored', response
                         );
                     });
-                // Call success funtion with url
+                // Call success function with url
               }, function(response) {
                 $rootScope.$emit(
                   'invenio.uploader.upload.file.errored', response
@@ -217,9 +218,27 @@ function InvenioFilesUploaderModel($rootScope, $q, InvenioFilesAPI) {
   };
 
   Uploader.prototype._upload = function (file) {
+    var args;
     var deferred = $q.defer();
     var that = this;
-    if (this.args.resumeChunkSize === undefined || file.size < this.args.resumeChunkSize) {
+    if (file.remote) {
+      $rootScope.$emit(
+        'invenio.uploader.upload.file.normal.requested', file
+      );
+      // Prepare args
+      args = that._prepareRequest(file, 'POST');
+      args.remote = true;
+      args.url += '?remote=true';
+      // Add the file
+      args.data = {
+        remoteUrl: file.url
+      };
+      // Resolve the request
+      deferred.resolve({
+        uploadArgs: args,
+        successCallback: that.postRemoteUploadProcess
+      });
+    } else if (this.args.resumeChunkSize === undefined || file.size < this.args.resumeChunkSize) {
       $rootScope.$emit(
         'invenio.uploader.upload.file.normal.requested', file
       );
@@ -275,6 +294,59 @@ function InvenioFilesUploaderModel($rootScope, $q, InvenioFilesAPI) {
     return deferred.promise;
   };
 
+  Uploader.prototype.postRemoteUploadProcess = function(obj) {
+    var deferred = $q.defer();
+    var progressUrl = obj.config.url + '&remoteId=' + obj.data.id;
+
+    var doReject = function() {
+      deferred.reject({config: {data: {file: {name: obj.data.upload_key}}}});
+    };
+    var doResolve = function() {
+      deferred.resolve({data: {key: obj.data.upload_key}});
+    };
+
+    // Check the progress of the upload
+    var progressInterval = $interval(function() {
+      InvenioFilesAPI.request({
+        method: 'GET', url: progressUrl
+      }).then(function(res) {
+        var data = res.data;
+        var progress = 0;
+        if (data.done) {
+          progress = 100;
+        } else if (data.size) {
+          progress = parseInt(100.0 * data.size / data.total, 10);
+        }
+        var params = {
+          file: { key: obj.data.upload_key },
+          progress: progress > 100 ? 100 : progress
+        };
+        $rootScope.$emit(
+          'invenio.uploader.upload.file.progress', params
+        );
+        if (data.done) {
+          $interval.cancel(progressInterval);
+          if (data.error) {
+            doReject();
+          } else {
+            doResolve();
+          }
+        }
+      }, function(err) {
+        $interval.cancel(progressInterval);
+        doReject();
+      });
+    }, 1000);
+
+    // Cancel the interval and reject the promise on cancel
+    $rootScope.$on('invenio.uploader.upload.canceled', function() {
+      $interval.cancel(progressInterval);
+      doReject();
+    });
+
+    return deferred.promise;
+  };
+
   Uploader.prototype.postNormalUploadProcess = function(obj, file) {
     var deferred = $q.defer();
     deferred.resolve(obj);
@@ -314,6 +386,7 @@ function InvenioFilesUploaderModel($rootScope, $q, InvenioFilesAPI) {
 InvenioFilesUploaderModel.$inject = [
   '$rootScope',
   '$q',
+  '$interval',
   'InvenioFilesAPI'
 ];
 

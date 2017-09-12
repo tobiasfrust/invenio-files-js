@@ -30,11 +30,21 @@ describe('Unit: testing the module', function() {
   var $rootScope;
   var $templateCache;
   var $timeout;
+  var $interval;
   var ctrl;
   var scope;
   var template;
 
   // Add some files for upload
+  var _remoteFiles = [
+    {
+      key: 'remote.pdf',
+      name: 'remote.pdf',
+      remote: true,
+      size: 100,
+      url: 'http://home.cern'
+    }
+  ];
   var _files = [
     {
       name: 'dare_devil.pdf',
@@ -64,7 +74,7 @@ describe('Unit: testing the module', function() {
       lastModified: 1464785035000,
       lastModifiedDate: '2016-06-01T12:43:55.000Z'
     }
-  ];
+  ].concat(_remoteFiles);
 
   var _smallFileResponse = {
     'mimetype': 'application/pdf',
@@ -111,6 +121,12 @@ describe('Unit: testing the module', function() {
         '<invenio-files-list ' +
           'template="src/invenio-files-js/templates/list.html" ' +
         '></invenio-files-list> ' +
+        '<invenio-files-upload-remote ' +
+          'template="src/invenio-files-js/templates/remote_upload.html" ' +
+          'dropbox-selector=".dropbox-upload" ' +
+          'dropbox-enabled="true" ' +
+          'dropbox-app-key="DROPBOX-APP-KEY"' +
+        '></invenio-files-upload-remote> ' +
       '</invenio-files-uploader>';
     // Compile
     template = $compile(_t)(scope);
@@ -123,9 +139,9 @@ describe('Unit: testing the module', function() {
     // Digest
     scope.$apply();
     // 5 files on the UI
-    expect(template.find('.sel-file').length).to.be.equal(5);
+    expect(template.find('.sel-file').length).to.be.equal(6);
     // Check also in the controller
-    expect(scope.filesVM.files.length).to.be.equal(5);
+    expect(scope.filesVM.files.length).to.be.equal(6);
     // Call upload
     scope.filesVM.upload();
   }
@@ -138,7 +154,7 @@ describe('Unit: testing the module', function() {
   });
 
   beforeEach(inject(function(
-      _$controller_, _$compile_, _$httpBackend_, _$rootScope_, _$templateCache_, _$timeout_) {
+      _$controller_, _$compile_, _$httpBackend_, _$rootScope_, _$templateCache_, _$timeout_, _$interval_) {
     // Controller
     $controller = _$controller_;
     // Compile
@@ -153,6 +169,8 @@ describe('Unit: testing the module', function() {
     $templateCache = _$templateCache_;
     // Timeout
     $timeout = _$timeout_;
+    // Interval
+    $interval = _$interval_;
 
     // The controller
     ctrl = $controller('InvenioFilesCtrl', {
@@ -171,6 +189,7 @@ describe('Unit: testing the module', function() {
     expect(template.find('.sel-file').eq(2).find('td').eq(1).text()).to.be.equal('9094.9 Tb');
     expect(template.find('.sel-file').eq(3).find('td').eq(1).text()).to.be.equal('9.3 Gb');
     expect(template.find('.sel-file').eq(4).find('td').eq(1).text()).to.be.equal('9 B');
+    expect(template.find('.sel-file').eq(5).find('td').eq(1).text()).to.be.equal('100 B');
   });
 
   it('should initialize the uploader with event', function() {
@@ -416,7 +435,7 @@ describe('Unit: testing the module', function() {
     scope.$digest();
 
     // One preloaded file
-    expect(template.find('.sel-file').length).to.be.equal(4);
+    expect(template.find('.sel-file').length).to.be.equal(5);
 
     // Remove not uploaded file
     scope.filesVM.remove(scope.filesVM.files[2]);
@@ -584,4 +603,148 @@ describe('Unit: testing the module', function() {
     // Should trigger cancel
     expect(spy.calledWith('invenio.uploader.upload.canceled')).to.be.true;
   });
+
+  it('should upload by Dropbox', function() {
+    var resp = {
+      size: 100,
+      total: 1000
+    };
+
+    // Call directiveTemplate
+    directiveTemplate('bucket="/api/bucket_id"');
+    $httpBackend.when('POST', '/api/bucket_id/remote.pdf?remote=true').respond(200, {
+      id: 123456,
+      links: _links,
+      upload_key: 'remote.pdf'
+    });
+    $httpBackend.when('GET', '/api/bucket_id/remote.pdf?remote=true&remoteId=123456').respond(function() {
+      return [200, resp];
+    });
+
+    // Upload files
+    scope.filesVM.addFiles(_remoteFiles);
+
+    // Digest
+    scope.$digest();
+
+    // Call upload
+    scope.filesVM.upload();
+
+    // Digest
+    scope.$digest();
+    $httpBackend.flush();
+
+    // Get the progress
+    $interval.flush(1000);
+    $httpBackend.flush();
+    scope.$digest();
+
+    // Expect the progress to be 10%
+    expect(scope.filesVM.files[1].progress).to.be.equal(10);
+
+    resp.size = 800;
+
+    // Get the new progress
+    $interval.flush(1000);
+    $httpBackend.flush();
+    scope.$digest();
+    // Expect the progress to be 80%
+
+    expect(scope.filesVM.files[1].progress).to.be.equal(80);
+
+    resp = { done: true };
+
+    // Get the new progress
+    $interval.flush(1000);
+    $httpBackend.flush();
+    scope.$digest();
+
+    // Expect the progress to be 100%
+    expect(scope.filesVM.files[1].progress).to.be.equal(100);
+  });
+
+  it('should upload by URL and error', function() {
+    // Spy on $broadcast
+    var spy = sinon.spy($rootScope, '$emit');
+
+    // Call directiveTemplate
+    directiveTemplate('bucket="/api/bucket_id"');
+    $httpBackend.when('POST', '/api/bucket_id/remote.pdf?remote=true').respond(200, {
+      id: 123456,
+      links: _links,
+      upload_key: 'remote.pdf'
+    });
+    $httpBackend.when('GET', '/api/bucket_id/remote.pdf?remote=true&remoteId=123456').respond(400, {});
+    $httpBackend.when('HEAD', 'http://www.cern.com/remote.pdf?a=100').respond(200, {}, {
+      'Content-Length': 10000
+    });
+
+    // Upload file by URL
+    template.find('invenio-files-upload-remote').scope().startUrlUpload('http://www.cern.com/remote.pdf?a=100');3
+
+    // Digest
+    $httpBackend.flush();
+    scope.$digest();
+
+    // Call upload
+    scope.filesVM.upload();
+
+    // Digest
+    scope.$digest();
+    $httpBackend.flush();
+
+    // Get the progress
+    $interval.flush(1000);
+    $httpBackend.flush();
+    scope.$digest();
+
+    // Expect file upload error emission
+    expect(spy.calledWith('invenio.uploader.upload.file.errored')).to.be.true;
+  });
+
+  it('should cancel uploads', function() {
+    // Spy on $broadcast
+    var emit = sinon.spy($rootScope, '$emit');
+    var delay = sinon.spy(_, 'delay');
+
+    // Call directiveTemplate
+    directiveTemplate('bucket="/api/bucket_id"');
+    $httpBackend.when('POST', '/api/bucket_id/remote.pdf?remote=true').respond(200, {
+      id: 123456,
+      links: _links,
+      upload_key: 'remote.pdf'
+    });
+    $httpBackend.when('HEAD', 'http://www.cern.com/remote.pdf?a=100').respond(200, {}, {
+      'Content-Length': 10000
+    });
+
+    // Upload file by URL
+    template.find('invenio-files-upload-remote').scope().startUrlUpload('http://www.cern.com/remote.pdf?a=100');
+
+    // Digest
+    $httpBackend.flush();
+    scope.$digest();
+
+    // Call upload
+    scope.filesVM.upload();
+
+    // Digest
+    scope.$digest();
+    $httpBackend.flush();
+
+    // Cancel uploads
+    scope.filesVM.cancel();
+    scope.$digest();
+    $timeout.flush(100);
+
+
+    expect(delay.calledOnce).to.be.true;
+
+    // Call the delayed method
+    delay.firstCall.args[0]();
+
+    // Expect file upload cancel emission
+    expect(emit.calledWith('invenio.uploader.upload.canceled')).to.be.true;
+  });
+
 });
